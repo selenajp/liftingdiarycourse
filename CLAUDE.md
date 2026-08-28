@@ -11,6 +11,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 No test framework is configured yet.
 
+## Docs
+
+** IMPORTANT ** Before generating any code, ALWAYS check the `/docs` directory first for a relevant doc file and follow it.
+- /docs/ui.md
+
 ## Architecture
 
 This is a Next.js 16 (App Router) + React 19 + TypeScript project, currently at initial `create-next-app` scaffold state (no custom routes, components, or data layer yet beyond `src/app/layout.tsx` and `src/app/page.tsx`).
