@@ -9,11 +9,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
-
-function parseDateParam(dateParam: string) {
-  const [year, month, day] = dateParam.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
+import { parseDateParam } from "@/lib/date";
 
 function formatDateParam(date: Date) {
   const year = date.getFullYear();

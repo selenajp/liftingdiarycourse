@@ -1,5 +1,9 @@
 import { format } from "date-fns";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { WorkoutDatePicker } from "@/components/workout-date-picker";
+import { getWorkoutsForDate } from "@/data/workouts";
+import { parseDateParam } from "@/lib/date";
 import {
   Card,
   CardAction,
@@ -17,55 +21,20 @@ function formatOrdinalDate(date: Date) {
   );
 }
 
-const mockWorkouts = [
-  {
-    id: "1",
-    name: "Push Day",
-    performedAt: new Date(),
-    exercises: [
-      {
-        id: "e1",
-        name: "Bench Press",
-        sets: [
-          { id: "s1", reps: 8, weight: 60 },
-          { id: "s2", reps: 8, weight: 60 },
-          { id: "s3", reps: 6, weight: 65 },
-        ],
-      },
-      {
-        id: "e2",
-        name: "Overhead Press",
-        sets: [
-          { id: "s4", reps: 10, weight: 30 },
-          { id: "s5", reps: 10, weight: 30 },
-        ],
-      },
-    ],
-  },
-  {
-    id: "2",
-    name: "Evening Accessories",
-    performedAt: new Date(),
-    exercises: [
-      {
-        id: "e3",
-        name: "Tricep Pushdown",
-        sets: [
-          { id: "s6", reps: 12, weight: 20 },
-          { id: "s7", reps: 12, weight: 20 },
-        ],
-      },
-    ],
-  },
-];
-
 export default async function DashboardPage({
   searchParams,
 }: {
   searchParams: Promise<{ date?: string }>;
 }) {
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/sign-in");
+  }
+
   const { date } = await searchParams;
   const dateParam = date ?? format(new Date(), "yyyy-MM-dd");
+
+  const workouts = await getWorkoutsForDate(userId, parseDateParam(dateParam));
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
@@ -75,21 +44,21 @@ export default async function DashboardPage({
       </div>
 
       <div className="flex flex-col gap-4">
-        {mockWorkouts.length === 0 ? (
+        {workouts.length === 0 ? (
           <Card>
             <CardHeader>
               <CardTitle>No workouts logged</CardTitle>
               <CardDescription>
-                Nothing logged for {formatOrdinalDate(new Date(dateParam))}{" "}
+                Nothing logged for {formatOrdinalDate(parseDateParam(dateParam))}{" "}
                 yet.
               </CardDescription>
             </CardHeader>
           </Card>
         ) : (
-          mockWorkouts.map((workout) => (
+          workouts.map((workout) => (
             <Card key={workout.id}>
               <CardHeader>
-                <CardTitle>{workout.name}</CardTitle>
+                <CardTitle>{workout.name ?? "Workout"}</CardTitle>
                 <CardDescription>
                   {formatOrdinalDate(workout.performedAt)}
                 </CardDescription>
@@ -103,11 +72,14 @@ export default async function DashboardPage({
                 {workout.exercises.map((exercise, index) => (
                   <div key={exercise.id} className="flex flex-col gap-2">
                     {index > 0 && <Separator className="mb-2" />}
-                    <p className="font-medium">{exercise.name}</p>
+                    <p className="font-medium">
+                      {exercise.exercise?.name ?? "Exercise"}
+                    </p>
                     <div className="flex flex-wrap gap-2">
                       {exercise.sets.map((set, setIndex) => (
                         <Badge key={set.id} variant="outline">
-                          Set {setIndex + 1}: {set.reps} x {set.weight}kg
+                          Set {setIndex + 1}: {set.reps} x {set.weight}
+                          {set.weightUnit}
                         </Badge>
                       ))}
                     </div>

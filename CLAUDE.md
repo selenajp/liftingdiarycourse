@@ -15,6 +15,7 @@ No test framework is configured yet.
 
 ** IMPORTANT ** Before generating any code, ALWAYS check the `/docs` directory first for a relevant doc file and follow it.
 - /docs/ui.md
+- /docs/data-fetching.md
 
 ## Architecture
 
