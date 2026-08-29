@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { WorkoutDatePicker } from "@/components/workout-date-picker";
 import { getWorkoutsForDate } from "@/data/workouts";
 import { parseDateParam } from "@/lib/date";
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 
 function formatOrdinalDate(date: Date) {
   return format(date, "do MMM yyyy").replace(/[A-Za-z]+/, (month) =>
@@ -39,7 +41,12 @@ export default async function DashboardPage({
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <Button render={<Link href="/dashboard/workout/new" />}>
+            New workout
+          </Button>
+        </div>
         <WorkoutDatePicker dateParam={dateParam} />
       </div>
 

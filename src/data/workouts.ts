@@ -1,6 +1,66 @@
 import { and, eq, gte, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { exercises, sets, workoutExercises, workouts } from "@/db/schema";
+import { findOrCreateExercise } from "@/data/exercises";
+
+type CreateWorkoutSetInput = {
+  reps: number | null;
+  weight: string | null;
+  weightUnit: "lb" | "kg";
+  setType: "warmup" | "working" | "dropset" | "failure";
+};
+
+type CreateWorkoutExerciseInput = {
+  name: string;
+  notes: string | null;
+  sets: CreateWorkoutSetInput[];
+};
+
+type CreateWorkoutInput = {
+  name: string | null;
+  performedAt: Date;
+  exercises: CreateWorkoutExerciseInput[];
+};
+
+export async function createWorkout(userId: string, input: CreateWorkoutInput) {
+  const [workout] = await db
+    .insert(workouts)
+    .values({
+      userId,
+      name: input.name,
+      performedAt: input.performedAt,
+    })
+    .returning();
+
+  for (const [exerciseIndex, exerciseInput] of input.exercises.entries()) {
+    const exercise = await findOrCreateExercise(exerciseInput.name);
+
+    const [workoutExercise] = await db
+      .insert(workoutExercises)
+      .values({
+        workoutId: workout.id,
+        exerciseId: exercise.id,
+        order: exerciseIndex,
+        notes: exerciseInput.notes,
+      })
+      .returning();
+
+    if (exerciseInput.sets.length > 0) {
+      await db.insert(sets).values(
+        exerciseInput.sets.map((set, setIndex) => ({
+          workoutExerciseId: workoutExercise.id,
+          setNumber: setIndex + 1,
+          weight: set.weight,
+          weightUnit: set.weightUnit,
+          reps: set.reps,
+          setType: set.setType,
+        })),
+      );
+    }
+  }
+
+  return workout;
+}
 
 export async function getWorkoutsForDate(userId: string, date: Date) {
   const startOfDay = new Date(date);
