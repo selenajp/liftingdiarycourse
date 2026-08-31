@@ -62,6 +62,113 @@ export async function createWorkout(userId: string, input: CreateWorkoutInput) {
   return workout;
 }
 
+export async function getWorkoutById(userId: string, workoutId: string) {
+  const rows = await db
+    .select({
+      workout: workouts,
+      workoutExercise: workoutExercises,
+      exercise: exercises,
+      set: sets,
+    })
+    .from(workouts)
+    .leftJoin(workoutExercises, eq(workoutExercises.workoutId, workouts.id))
+    .leftJoin(exercises, eq(exercises.id, workoutExercises.exerciseId))
+    .leftJoin(sets, eq(sets.workoutExerciseId, workoutExercises.id))
+    .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)))
+    .orderBy(workoutExercises.order, sets.setNumber);
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const workoutExerciseMap = new Map<
+    string,
+    typeof workoutExercises.$inferSelect & {
+      exercise: typeof exercises.$inferSelect | null;
+      sets: (typeof sets.$inferSelect)[];
+    }
+  >();
+
+  for (const row of rows) {
+    if (row.workoutExercise) {
+      if (!workoutExerciseMap.has(row.workoutExercise.id)) {
+        workoutExerciseMap.set(row.workoutExercise.id, {
+          ...row.workoutExercise,
+          exercise: row.exercise,
+          sets: [],
+        });
+      }
+      const workoutExercise = workoutExerciseMap.get(row.workoutExercise.id)!;
+
+      if (row.set) {
+        workoutExercise.sets.push(row.set);
+      }
+    }
+  }
+
+  return {
+    ...rows[0].workout,
+    exercises: Array.from(workoutExerciseMap.values()),
+  };
+}
+
+export async function updateWorkout(
+  userId: string,
+  workoutId: string,
+  input: CreateWorkoutInput,
+) {
+  const [workout] = await db
+    .update(workouts)
+    .set({
+      name: input.name,
+      performedAt: input.performedAt,
+    })
+    .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)))
+    .returning();
+
+  if (!workout) {
+    return null;
+  }
+
+  const existingWorkoutExercises = await db
+    .select({ id: workoutExercises.id })
+    .from(workoutExercises)
+    .where(eq(workoutExercises.workoutId, workout.id));
+
+  if (existingWorkoutExercises.length > 0) {
+    await db.delete(workoutExercises).where(eq(workoutExercises.workoutId, workout.id));
+  }
+
+  for (const [exerciseIndex, exerciseInput] of input.exercises.entries()) {
+    const exercise = await findOrCreateExercise(exerciseInput.name);
+
+    const [workoutExercise] = await db
+      .insert(workoutExercises)
+      .values({
+        workoutId: workout.id,
+        exerciseId: exercise.id,
+        order: exerciseIndex,
+        notes: exerciseInput.notes,
+      })
+      .returning();
+
+    if (exerciseInput.sets.length > 0) {
+      await db.insert(sets).values(
+        exerciseInput.sets.map((set, setIndex) => ({
+          workoutExerciseId: workoutExercise.id,
+          setNumber: setIndex + 1,
+          weight: set.weight,
+          weightUnit: set.weightUnit,
+          reps: set.reps,
+          setType: set.setType,
+        })),
+      );
+    }
+  }
+
+  return workout;
+}
+
 export async function getWorkoutsForDate(userId: string, date: Date) {
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);

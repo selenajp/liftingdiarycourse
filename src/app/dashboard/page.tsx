@@ -43,7 +43,7 @@ export default async function DashboardPage({
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-2xl font-semibold">Dashboard</h1>
-          <Button render={<Link href="/dashboard/workout/new" />}>
+          <Button nativeButton={false} render={<Link href="/dashboard/workout/new" />}>
             New workout
           </Button>
         </div>
@@ -69,10 +69,18 @@ export default async function DashboardPage({
                 <CardDescription>
                   {formatOrdinalDate(workout.performedAt)}
                 </CardDescription>
-                <CardAction>
+                <CardAction className="flex items-center gap-2">
                   <Badge variant="secondary">
                     {workout.exercises.length} exercises
                   </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false}
+                    render={<Link href={`/dashboard/workout/${workout.id}`} />}
+                  >
+                    Edit
+                  </Button>
                 </CardAction>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
